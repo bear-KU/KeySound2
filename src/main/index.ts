@@ -1,7 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+let tray: Tray | null = null
+let mainWindow: BrowserWindow | null = null
 import { GlobalKeyboardListener } from 'node-global-key-listener'
 
 import { SoundManager } from './SoundManager'
@@ -10,7 +12,7 @@ import defaultAudioPath from '../../resources/audio/mechanic.mp3?asset'
 const currentAudioPath = defaultAudioPath
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -23,7 +25,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -59,6 +61,27 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.hide()
+  }
+
+  let trayIcon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
+  if (process.platform === 'darwin') {
+    trayIcon = trayIcon.resize({ width: 22, height: 22 })
+  } else if (process.platform === 'linux') {
+    trayIcon = trayIcon.resize({ width: 32, height: 32 })
+  }
+  tray = new Tray(trayIcon)
+  tray.on('click', () => {
+    if (!mainWindow) return
+    if (mainWindow.isVisible()) {
+      mainWindow.hide()
+    } else {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -88,6 +111,7 @@ app.whenReady().then(() => {
   app.on('will-quit', () => {
     // Clean up resources if needed
     keyListener.kill()
+    tray?.destroy()
   })
 })
 
