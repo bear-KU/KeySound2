@@ -8,8 +8,10 @@ import { GlobalKeyboardListener } from 'node-global-key-listener'
 
 import { SoundManager } from './SoundManager'
 import defaultAudioPath from '../../resources/audio/mechanic.mp3?asset'
-
 const currentAudioPath = defaultAudioPath
+
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -39,24 +41,6 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
-
-// function setupKeyListener(): GlobalKeyboardListener {
-//   const listener = new GlobalKeyboardListener()
-//   const ignoredKey = ['MOUSE LEFT', 'MOUSE RIGHT', 'MOUSE MIDDLE', 'MOUSE BUTTON4', 'MOUSE BUTTON5']
-
-//   listener.addListener((e) => {
-//     if (e.state === 'DOWN' && e.name && !ignoredKey.includes(e.name)) {
-//       sound.play(audioPath, (err) => {
-//         if (err) {
-//           console.error('Error playing audio:', err)
-//         } else {
-//           console.log(`Key pressed: ${e.name} (${e.rawKey})`)
-//         }
-//       })
-//     }
-//   })
-//   return listener
-// }
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
@@ -93,8 +77,44 @@ app.whenReady().then(() => {
 
   const soundManager = new SoundManager(currentAudioPath)
 
-  // const keyListener = setupKeyListener()
-  const keyListener = new GlobalKeyboardListener()
+  let keyListener
+  const isWayland = process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland'
+
+  if (isWayland) {
+    console.log('Environment: Wayland')
+    try {
+      const bindings = require('bindings')
+      const keyListenerWayland = bindings({
+        module_root: join(__dirname, '../../native'),
+        bindings: 'keylistener'
+      })
+
+      const devicePath = '/dev/input/event2' // TODO: Add logic to dynamically find the keyboard device
+      const nativeListener = new keyListenerWayland.KeyListener(devicePath)
+
+      keyListener = {
+        addListener: (callback) => {
+          nativeListener.start((event) => {
+            if (event.type === 'error') {
+              console.error('KeyListener error:', event.error)
+            } else {
+              callback(event)
+            }
+          })
+        },
+        kill: () => {
+          nativeListener.stop()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load Wayland key listener:', error)
+      keyListener = new GlobalKeyboardListener()
+    }
+  } else {
+    console.log('Environment: X11 or non-Linux')
+    keyListener = new GlobalKeyboardListener()
+  }
+
   const ignoredKey = ['MOUSE LEFT', 'MOUSE RIGHT', 'MOUSE MIDDLE', 'MOUSE BUTTON4', 'MOUSE BUTTON5']
 
   keyListener.addListener((e) => {
