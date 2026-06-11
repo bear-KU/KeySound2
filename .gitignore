@@ -7,3 +7,4 @@ out
 *.log*
 *.mp3
 *.wav
+.vscode/c_cpp_properties.json

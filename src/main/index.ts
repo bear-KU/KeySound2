@@ -75,6 +75,24 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  // ======== KeyFinder の呼び出しテスト ==========
+  try {
+    const bindings = require('bindings')
+    const keyFinder = bindings({
+      module_root: join(__dirname, '../../native'),
+      bindings: 'keyfinder'
+    })
+
+    const keyboards = keyFinder.findKeyboards()
+    console.log('=== Detected keyboards ===')
+    for (const k of keyboards) {
+      console.log(`Name: ${k.name}, Path: ${k.path}`)
+    }
+  } catch (error) {
+    console.error('Failed to load KeyFinder addon:', error)
+  }
+  // ===============================================
+
   const soundManager = new SoundManager(currentAudioPath)
 
   let keyListener
@@ -89,7 +107,7 @@ app.whenReady().then(() => {
         bindings: 'keylistener'
       })
 
-      const devicePath = '/dev/input/event2' // TODO: Add logic to dynamically find the keyboard device
+      const devicePath = '/dev/input/event12' // TODO: Add logic to dynamically find the keyboard device
       const nativeListener = new keyListenerWayland.KeyListener(devicePath)
 
       keyListener = {
