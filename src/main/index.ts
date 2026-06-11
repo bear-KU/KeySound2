@@ -2,13 +2,12 @@ import { app, shell, BrowserWindow, ipcMain, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 let tray: Tray | null = null
 let mainWindow: BrowserWindow | null = null
 import { GlobalKeyboardListener } from 'node-global-key-listener'
-
-import { SoundManager } from './SoundManager'
-import defaultAudioPath from '../../resources/audio/mechanic.mp3?asset'
-const currentAudioPath = defaultAudioPath
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
@@ -93,8 +92,6 @@ app.whenReady().then(() => {
   }
   // ===============================================
 
-  const soundManager = new SoundManager(currentAudioPath)
-
   let keyListener
   const isWayland = process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland'
 
@@ -137,7 +134,7 @@ app.whenReady().then(() => {
 
   keyListener.addListener((e) => {
     if (e.state === 'DOWN' && e.name && !ignoredKey.includes(e.name)) {
-      soundManager.playSound()
+      mainWindow?.webContents.send('key-down')
     }
   })
 

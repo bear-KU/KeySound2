@@ -1,11 +1,12 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 // TODO: modify this to your own APIs
 const api = {
-  // Example:
-  // myApiMethod: () => { ... }
+  onKeyDown: (callback: () => void) => {
+    ipcRenderer.on('key-down', () => callback())
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
