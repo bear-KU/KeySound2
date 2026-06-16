@@ -1,11 +1,11 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAudio } from './hooks/useAudio'
+import { SoundSettings } from './components/SoundSettings'
 import mechanic from '../../../resources/audio/mechanic.mp3'
 
 function App(): React.JSX.Element {
-  const { playSound } = useAudio(mechanic)
+  const [audioSrc, setAudioSrc] = useState<string>(mechanic)
+  const { playSound } = useAudio(audioSrc)
 
   useEffect(() => {
     window.api.onKeyDown(() => {
@@ -15,23 +15,7 @@ function App(): React.JSX.Element {
 
   return (
     <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
-        </div>
-      </div>
-      <Versions />
+      <SoundSettings onAudioFileChange={setAudioSrc} />
     </>
   )
 }

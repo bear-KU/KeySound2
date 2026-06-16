@@ -5,6 +5,12 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   onKeyDown: (callback: () => void) => {
     ipcRenderer.on('key-down', () => callback())
+  },
+  selectAudioFile: (): Promise<string | null> => {
+    return ipcRenderer.invoke('select-audio-file')
+  },
+  readAudioFile: (filePath: string): Promise<ArrayBuffer> => {
+    return ipcRenderer.invoke('read-audio-file', filePath)
   }
 }
 

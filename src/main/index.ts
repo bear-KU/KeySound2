@@ -1,7 +1,8 @@
-import { app, shell, BrowserWindow, Tray, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, Tray, nativeImage, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { readFile } from 'fs/promises'
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
@@ -70,6 +71,23 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  ipcMain.handle('select-audio-file', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac'] }]
+    })
+    if (result.canceled) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('read-audio-file', async (_, filePath: string) => {
+    const buffer = await readFile(filePath)
+    return buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    ) as ArrayBuffer
+  })
 
   // ======== KeyFinder の呼び出しテスト ==========
   try {

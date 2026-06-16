@@ -8,12 +8,16 @@ export function useAudio(src: string): { playSound: () => void } {
     const ctx = new AudioContext()
     audioContextRef.current = ctx
 
-    fetch(src)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => ctx.decodeAudioData(buf))
+    const isLocalFile = src.startsWith('/') && !src.startsWith('/@fs/')
+    const loadPromise = isLocalFile
+      ? window.api.readAudioFile(src).then((buf) => ctx.decodeAudioData(buf))
+      : fetch(src)
+          .then((res) => res.arrayBuffer())
+          .then((buf) => ctx.decodeAudioData(buf))
+
+    loadPromise
       .then((decoded) => {
         audioBufferRef.current = decoded
-        console.log('Audio buffer loaded')
       })
       .catch((err) => console.error('Failed to load audio:', err))
 
