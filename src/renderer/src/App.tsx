@@ -1,41 +1,17 @@
 import Versions from './components/Versions'
 import electronLogo from './assets/electron.svg'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
+import { useAudio } from './hooks/useAudio'
 import mechanic from '../../../resources/audio/mechanic.mp3'
 
 function App(): React.JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const audioBufferRef = useRef<AudioBuffer | null>(null)
+  const { playSound } = useAudio(mechanic)
 
   useEffect(() => {
-    audioContextRef.current = new AudioContext()
-
-    fetch(mechanic)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => audioContextRef.current!.decodeAudioData(buf))
-      .then((decoded) => {
-        audioBufferRef.current = decoded
-        console.log('Audio buffer loaded')
-      })
-      .catch((err) => console.error('Failed to load audio:', err))
-
     window.api.onKeyDown(() => {
-      const ctx = audioContextRef.current
-      const buffer = audioBufferRef.current
-      if (!ctx || !buffer) return
-
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
-      source.connect(ctx.destination)
-      source.start()
+      playSound()
     })
-
-    return () => {
-      audioContextRef.current?.close()
-    }
-  }, [])
+  }, [playSound])
 
   return (
     <>
@@ -52,11 +28,6 @@ function App(): React.JSX.Element {
         <div className="action">
           <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
             Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
           </a>
         </div>
       </div>

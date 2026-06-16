@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-// TODO: modify this to your own APIs
 const api = {
   onKeyDown: (callback: () => void) => {
     ipcRenderer.on('key-down', () => callback())
