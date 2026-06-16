@@ -8,14 +8,9 @@ export function useAudio(src: string): { playSound: () => void } {
     const ctx = new AudioContext()
     audioContextRef.current = ctx
 
-    const isLocalFile = src.startsWith('/') && !src.startsWith('/@fs/')
-    const loadPromise = isLocalFile
-      ? window.api.readAudioFile(src).then((buf) => ctx.decodeAudioData(buf))
-      : fetch(src)
-          .then((res) => res.arrayBuffer())
-          .then((buf) => ctx.decodeAudioData(buf))
-
-    loadPromise
+    fetch(src)
+      .then((res) => res.arrayBuffer())
+      .then((buf) => ctx.decodeAudioData(buf))
       .then((decoded) => {
         audioBufferRef.current = decoded
       })

@@ -5,7 +5,7 @@ declare global {
     electron: ElectronAPI
     api: {
       onKeyDown: (callback: () => void) => void
-      selectAudioFile: () => Promise<string | null>
+      getFilePath: (file: File) => string
       readAudioFile: (filePath: string) => Promise<ArrayBuffer>
     }
   }

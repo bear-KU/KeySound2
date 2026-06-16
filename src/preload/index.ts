@@ -1,22 +1,18 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
 const api = {
-  onKeyDown: (callback: () => void) => {
+  onKeyDown: (callback: () => void): void => {
     ipcRenderer.on('key-down', () => callback())
   },
-  selectAudioFile: (): Promise<string | null> => {
-    return ipcRenderer.invoke('select-audio-file')
+  getFilePath: (file: File): string => {
+    return webUtils.getPathForFile(file)
   },
   readAudioFile: (filePath: string): Promise<ArrayBuffer> => {
     return ipcRenderer.invoke('read-audio-file', filePath)
   }
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
