@@ -10,6 +10,12 @@ const api = {
   },
   readAudioFile: (filePath: string): Promise<ArrayBuffer> => {
     return ipcRenderer.invoke('read-audio-file', filePath)
+  },
+  getSettings: (): Promise<{ defaultSound: string; keySounds: Record<string, string> }> => {
+    return ipcRenderer.invoke('get-settings')
+  },
+  setDefaultSound: (soundPath: string): Promise<void> => {
+    return ipcRenderer.invoke('set-default-sound', soundPath)
   }
 }
 

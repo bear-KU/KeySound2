@@ -8,14 +8,32 @@ function App(): React.JSX.Element {
   const { playSound } = useAudio(audioSrc)
 
   useEffect(() => {
+    const loadSettings = async (): Promise<void> => {
+      const settings = await window.api.getSettings()
+      if (settings.defaultSound) {
+        const buffer = await window.api.readAudioFile(settings.defaultSound)
+        const blob = new Blob([buffer])
+        const url = URL.createObjectURL(blob)
+        setAudioSrc(url)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  useEffect(() => {
     window.api.onKeyDown(() => {
       playSound()
     })
   }, [playSound])
 
+  const handleAudioFileChange = async (src: string, filePath: string): Promise<void> => {
+    setAudioSrc(src)
+    await window.api.setDefaultSound(filePath)
+  }
+
   return (
     <>
-      <SoundSettings onAudioFileChange={setAudioSrc} />
+      <SoundSettings onAudioFileChange={handleAudioFileChange} />
     </>
   )
 }

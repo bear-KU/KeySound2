@@ -13,6 +13,14 @@ import { GlobalKeyboardListener } from 'node-global-key-listener'
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
 
+const Store = require('electron-store').default
+const store = new Store({
+  defaults: {
+    defaultSound: '',
+    keySounds: {}
+  }
+})
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 900,
@@ -78,6 +86,14 @@ app.whenReady().then(() => {
       buffer.byteOffset,
       buffer.byteOffset + buffer.byteLength
     ) as ArrayBuffer
+  })
+
+  ipcMain.handle('get-settings', () => {
+    return store.store
+  })
+
+  ipcMain.handle('set-default-sound', (_, soundPath: string) => {
+    store.set('defaultSound', soundPath)
   })
 
   // ======== KeyFinder の呼び出しテスト ==========
