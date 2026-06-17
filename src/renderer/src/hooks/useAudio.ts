@@ -13,7 +13,6 @@ export function useAudio(src: string): { playSound: () => void } {
       .then((buf) => ctx.decodeAudioData(buf))
       .then((decoded) => {
         audioBufferRef.current = decoded
-        console.log('Audio buffer loaded')
       })
       .catch((err) => console.error('Failed to load audio:', err))
 

@@ -1,7 +1,8 @@
-import { app, shell, BrowserWindow, Tray, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, Tray, nativeImage, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { readFile } from 'fs/promises'
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
@@ -11,6 +12,14 @@ import { GlobalKeyboardListener } from 'node-global-key-listener'
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
+
+const Store = require('electron-store').default
+const store = new Store({
+  defaults: {
+    defaultSound: '',
+    keySounds: {}
+  }
+})
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -70,6 +79,22 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  ipcMain.handle('read-audio-file', async (_, filePath: string) => {
+    const buffer = await readFile(filePath)
+    return buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    ) as ArrayBuffer
+  })
+
+  ipcMain.handle('get-settings', () => {
+    return store.store
+  })
+
+  ipcMain.handle('set-default-sound', (_, soundPath: string) => {
+    store.set('defaultSound', soundPath)
+  })
 
   // ======== KeyFinder の呼び出しテスト ==========
   try {
