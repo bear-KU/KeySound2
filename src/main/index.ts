@@ -1,25 +1,15 @@
-import { app, shell, BrowserWindow, Tray, nativeImage, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { readFile } from 'fs/promises'
+import { registerStoreIPCHandlers } from './store'
+import { registerFileLoaderIPCHandlers } from './fileLoader'
+import { detectKeyboards, setupKeyListener } from './keyboard'
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
 let tray: Tray | null = null
 let mainWindow: BrowserWindow | null = null
-import { GlobalKeyboardListener } from 'node-global-key-listener'
-
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-
-const Store = require('electron-store').default
-const store = new Store({
-  defaults: {
-    defaultSound: '',
-    keySounds: {}
-  }
-})
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -79,86 +69,11 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  registerStoreIPCHandlers()
+  registerFileLoaderIPCHandlers()
+  detectKeyboards()
 
-  ipcMain.handle('read-audio-file', async (_, filePath: string) => {
-    const buffer = await readFile(filePath)
-    return buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    ) as ArrayBuffer
-  })
-
-  ipcMain.handle('get-settings', () => {
-    return store.store
-  })
-
-  ipcMain.handle('set-default-sound', (_, soundPath: string) => {
-    store.set('defaultSound', soundPath)
-  })
-
-  // ======== KeyFinder の呼び出しテスト ==========
-  try {
-    const bindings = require('bindings')
-    const keyFinder = bindings({
-      module_root: join(__dirname, '../../native'),
-      bindings: 'keyfinder'
-    })
-
-    const keyboards = keyFinder.findKeyboards()
-    console.log('=== Detected keyboards ===')
-    for (const k of keyboards) {
-      console.log(`Name: ${k.name}, Path: ${k.path}`)
-    }
-  } catch (error) {
-    console.error('Failed to load KeyFinder addon:', error)
-  }
-  // ===============================================
-
-  let keyListener
-  const isWayland = process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland'
-
-  if (isWayland) {
-    console.log('Environment: Wayland')
-    try {
-      const bindings = require('bindings')
-      const keyListenerWayland = bindings({
-        module_root: join(__dirname, '../../native'),
-        bindings: 'keylistener'
-      })
-
-      const devicePath = '/dev/input/event12' // TODO: Add logic to dynamically find the keyboard device
-      const nativeListener = new keyListenerWayland.KeyListener(devicePath)
-
-      keyListener = {
-        addListener: (callback) => {
-          nativeListener.start((event) => {
-            if (event.type === 'error') {
-              console.error('KeyListener error:', event.error)
-            } else {
-              callback(event)
-            }
-          })
-        },
-        kill: () => {
-          nativeListener.stop()
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load Wayland key listener:', error)
-      keyListener = new GlobalKeyboardListener()
-    }
-  } else {
-    console.log('Environment: X11 or non-Linux')
-    keyListener = new GlobalKeyboardListener()
-  }
-
-  const ignoredKey = ['MOUSE LEFT', 'MOUSE RIGHT', 'MOUSE MIDDLE', 'MOUSE BUTTON4', 'MOUSE BUTTON5']
-
-  keyListener.addListener((e) => {
-    if (e.state === 'DOWN' && e.name && !ignoredKey.includes(e.name)) {
-      mainWindow?.webContents.send('key-down')
-    }
-  })
+  const keyListener = setupKeyListener(mainWindow!)
 
   // For macOS
   app.on('activate', function () {
