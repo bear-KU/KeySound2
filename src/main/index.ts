@@ -2,9 +2,9 @@ import { app, shell, BrowserWindow, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { registerStoreIPCHandlers } from './store'
-import { registerFileLoaderIPCHandlers } from './fileLoader'
-import { detectKeyboards, setupKeyListener } from './keyboard'
+import { registerStoreIpcHandlers, store } from './store'
+import { registerFileLoaderIpcHandlers } from './fileLoader'
+import { detectKeyboards, registerKeyboardIpcHandlers, setupKeyListener } from './keyboard'
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
@@ -69,11 +69,21 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-  registerStoreIPCHandlers()
-  registerFileLoaderIPCHandlers()
-  detectKeyboards()
+  registerStoreIpcHandlers()
+  registerFileLoaderIpcHandlers()
+  registerKeyboardIpcHandlers()
 
-  const keyListener = setupKeyListener(mainWindow!)
+  console.log('[ Searching for event devices in /dev/input/ ]')
+  const keyboards = detectKeyboards()
+  console.log('=== Detected keyboards ===')
+  for (const k of keyboards) {
+    console.log(`Name: ${k.name}, Path: ${k.path}`)
+  }
+
+  const selectedNames: string[] = store.get('selectedKeyboards')
+  const devicePaths = keyboards.filter((k) => selectedNames.includes(k.name)).map((k) => k.path)
+
+  const keyListener = setupKeyListener(mainWindow!, devicePaths)
 
   // For macOS
   app.on('activate', function () {

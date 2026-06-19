@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAudio } from './hooks/useAudio'
 import { SoundSettings } from './components/SoundSettings'
+import { KeyboardSettings } from './components/KeyboardSettings'
 import mechanic from '../../../resources/audio/mechanic.mp3'
 
 function App(): React.JSX.Element {
@@ -34,6 +35,7 @@ function App(): React.JSX.Element {
   return (
     <>
       <SoundSettings onAudioFileChange={handleAudioFileChange} />
+      <KeyboardSettings />
     </>
   )
 }
