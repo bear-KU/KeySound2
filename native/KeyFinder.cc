@@ -115,8 +115,6 @@ std::vector<std::string> find_event_devices() {
   DIR* dir = opendir(dev_path.c_str());
   dirent* entry;
 
-  std::printf("[ Searching for event devices in /dev/input/ ]\n");
-
   if (dir == NULL) {
     perror("Failed to open /dev/input/");
     return devices;

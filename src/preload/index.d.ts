@@ -1,4 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import { KeyboardDevice, StoreSchema } from '../shared/types'
 
 declare global {
   interface Window {
@@ -7,8 +8,10 @@ declare global {
       onKeyDown: (callback: () => void) => void
       getFilePath: (file: File) => string
       readAudioFile: (filePath: string) => Promise<ArrayBuffer>
-      getSettings: () => Promise<{ defaultSound: string; keySounds: Record<string, string> }>
+      getSettings: () => Promise<StoreSchema>
       setDefaultSound: (soundPath: string) => Promise<void>
+      setSelectedKeyboards: (keyboards: string[]) => Promise<void>
+      detectKeyboards: () => Promise<KeyboardDevice[]>
     }
   }
 }
