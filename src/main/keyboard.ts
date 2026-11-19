@@ -37,7 +37,7 @@ export function setupKeyListener(
       try {
         const keyListenerWayland = loadNativeAddon('keylistener') as {
           KeyListener: new (path: string) => {
-            start: (callback: (event: { type: string; error?: string }) => void) => void
+            start: (callback: (event: { type: string; message?: string }) => void) => void
             stop: () => void
           }
         }
@@ -48,7 +48,7 @@ export function setupKeyListener(
           addListener: (callback: (e: { state: string; name?: string }) => void) => {
             nativeListener.start((event) => {
               if (event.type === 'error') {
-                console.error('KeyListener error:', event.error)
+                console.error('KeyListener error:', event.message)
               } else {
                 callback(event as unknown as { state: string; name: string })
               }
@@ -60,7 +60,14 @@ export function setupKeyListener(
         }
 
         listener.addListener((e) => {
-          if (e.state === 'DOWN' && e.name && !ignoredKey.includes(e.name)) {
+          // TODO: ホールド時の再生周期を文字入力のリピート周期に合わせる
+          // REPEAT では周期がずれるため，対応までは DOWN のみで判定する
+          if (
+            // (e.state === 'DOWN' || e.state === 'REPEAT') &&
+            e.state === 'DOWN' &&
+            e.name &&
+            !ignoredKey.includes(e.name)
+          ) {
             mainWindow.webContents.send('key-down')
           }
         })

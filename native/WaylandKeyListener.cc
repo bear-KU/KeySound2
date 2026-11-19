@@ -69,12 +69,10 @@ KeyListener::KeyListener(const Napi::CallbackInfo& info)
 }
 
 KeyListener::~KeyListener() {
-    if (this->isRunning.load()) {
-        this->isRunning.store(false);
-        this->closeDevice();
-        if (this->workerThread.joinable()) {
-            this->workerThread.join();
-        }
+    this->isRunning.store(false);
+    this->closeDevice();
+    if (this->workerThread.joinable()) {
+        this->workerThread.join();
     }
 }
 
@@ -195,10 +193,6 @@ Napi::Value KeyListener::Start(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value KeyListener::Stop(const Napi::CallbackInfo& info) {
-    if (!this->isRunning.load()) {
-        return info.Env().Undefined();
-    }
-
     this->isRunning.store(false);
     this->closeDevice();
     if (this->workerThread.joinable()) {

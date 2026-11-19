@@ -3,8 +3,13 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { KeyboardDevice, StoreSchema } from '../shared/types'
 
 const api = {
-  onKeyDown: (callback: () => void): void => {
-    ipcRenderer.on('key-down', () => callback())
+  onKeyDown: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('key-down', listener)
+
+    return () => {
+      ipcRenderer.removeListener('key-down', listener)
+    }
   },
   getFilePath: (file: File): string => {
     return webUtils.getPathForFile(file)
@@ -23,6 +28,15 @@ const api = {
   },
   detectKeyboards: (): Promise<KeyboardDevice[]> => {
     return ipcRenderer.invoke('detect-keyboards')
+  },
+  openKeyboardSettingsWindow: (): Promise<void> => {
+    return ipcRenderer.invoke('open-keyboard-settings')
+  },
+  restartKeyListener: (): Promise<void> => {
+    return ipcRenderer.invoke('restart-key-listener')
+  },
+  closeKeyboardSettingsWindow: (): Promise<void> => {
+    return ipcRenderer.invoke('close-keyboard-settings')
   }
 }
 

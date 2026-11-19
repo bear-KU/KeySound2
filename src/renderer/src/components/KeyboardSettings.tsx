@@ -1,33 +1,40 @@
 import { useEffect, useState } from 'react'
 import { KeyboardDevice } from '../../../shared/types'
 
-export function KeyboardSettings(): React.JSX.Element {
+interface KeyboardSettingsProps {
+  selected: string[]
+  onSelectionChange: (selected: string[]) => void
+}
+
+export function KeyboardSettings({
+  selected,
+  onSelectionChange
+}: KeyboardSettingsProps): React.JSX.Element {
   const [keyboards, setKeyboards] = useState<KeyboardDevice[]>([])
-  const [selected, setSelected] = useState<string[]>([])
+
+  const loadKeyboards = async (): Promise<void> => {
+    const detected = await window.api.detectKeyboards()
+    setKeyboards(detected)
+  }
 
   useEffect(() => {
-    const load = async (): Promise<void> => {
-      const detected = await window.api.detectKeyboards()
-      setKeyboards(detected)
-
-      const settings = await window.api.getSettings()
-      setSelected(settings.selectedKeyboards)
-    }
-    load()
+    loadKeyboards()
   }, [])
 
-  const handleToggle = async (name: string): Promise<void> => {
+  const handleToggle = (name: string): void => {
     const newSelected = selected.includes(name)
       ? selected.filter((n) => n !== name)
       : [...selected, name]
 
-    setSelected(newSelected)
-    await window.api.setSelectedKeyboards(newSelected)
+    onSelectionChange(newSelected)
   }
 
   return (
     <div>
-      <h3>キーボード選択</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3>検出されたキーボード</h3>
+        <button onClick={loadKeyboards}>再検出</button>
+      </div>
       {keyboards.map((kb) => (
         <label key={kb.path} style={{ display: 'block' }}>
           <input

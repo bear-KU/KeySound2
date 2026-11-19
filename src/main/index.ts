@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, Tray, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, Tray, nativeImage, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -11,6 +11,73 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 let tray: Tray | null = null
 let mainWindow: BrowserWindow | null = null
 
+let keyboardSettingsWindow: BrowserWindow | null = null
+let keyListener: ReturnType<typeof setupKeyListener> | null = null
+
+function stopKeyListener(): void {
+  const currentListener = keyListener
+  keyListener = null
+  currentListener?.kill()
+}
+
+function restartKeyListener(): void {
+  stopKeyListener()
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  const selectedNames: string[] = store.get('selectedKeyboards')
+  const devicePaths = detectKeyboards()
+    .filter((keyboard) => selectedNames.includes(keyboard.name))
+    .map((keyboard) => keyboard.path)
+
+  keyListener = setupKeyListener(mainWindow, devicePaths)
+}
+
+async function openKeyboardSettingsWindow(): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  if (keyboardSettingsWindow && !keyboardSettingsWindow.isDestroyed()) {
+    keyboardSettingsWindow.show()
+    keyboardSettingsWindow.focus()
+    return
+  }
+
+  const settingsWindow = new BrowserWindow({
+    width: 600,
+    height: 500,
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+  keyboardSettingsWindow = settingsWindow
+
+  settingsWindow.once('ready-to-show', () => {
+    if (!settingsWindow.isDestroyed()) settingsWindow.show()
+  })
+
+  settingsWindow.on('closed', () => {
+    if (keyboardSettingsWindow === settingsWindow) {
+      keyboardSettingsWindow = null
+    }
+  })
+
+  try {
+    const rendererUrl = process.env['ELECTRON_RENDERER_URL']
+    if (is.dev && rendererUrl) {
+      await settingsWindow.loadURL(new URL('/keyboardSettings.html', rendererUrl).toString())
+    } else {
+      await settingsWindow.loadFile(join(__dirname, '../renderer/keyboardSettings.html'))
+    }
+  } catch (error) {
+    if (!settingsWindow.isDestroyed()) settingsWindow.destroy()
+    throw error
+  }
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 900,
@@ -22,6 +89,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    keyboardSettingsWindow?.destroy()
+    stopKeyListener()
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -73,26 +146,29 @@ app.whenReady().then(() => {
   registerFileLoaderIpcHandlers()
   registerKeyboardIpcHandlers()
 
-  console.log('[ Searching for event devices in /dev/input/ ]')
-  const keyboards = detectKeyboards()
-  console.log('=== Detected keyboards ===')
-  for (const k of keyboards) {
-    console.log(`Name: ${k.name}, Path: ${k.path}`)
-  }
+  ipcMain.handle('open-keyboard-settings', () => openKeyboardSettingsWindow())
 
-  const selectedNames: string[] = store.get('selectedKeyboards')
-  const devicePaths = keyboards.filter((k) => selectedNames.includes(k.name)).map((k) => k.path)
+  ipcMain.handle('restart-key-listener', () => restartKeyListener())
 
-  const keyListener = setupKeyListener(mainWindow!, devicePaths)
+  ipcMain.handle('close-keyboard-settings', (event) => {
+    if (keyboardSettingsWindow?.webContents === event.sender) {
+      keyboardSettingsWindow.close()
+    }
+  })
+
+  restartKeyListener()
 
   // For macOS
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+      restartKeyListener()
+    }
   })
 
   app.on('will-quit', () => {
     // Clean up resources if needed
-    keyListener.kill()
+    stopKeyListener()
     tray?.destroy()
   })
 })
